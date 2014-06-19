@@ -7,7 +7,7 @@
     - CALL: get-instance-public-ip $instance_id
       IN: "@../lib/aws/utils.yml"
       RESULT: server_ip
-    - CALL: check-login $server_ip
+    - CALL: check-login $server_ip $account
       IN: "@../lib/aws/utils.yml"
     - CALL: setup-wordpress $server_ip $account
       IN: "@./setup.yml"

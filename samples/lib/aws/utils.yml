@@ -43,9 +43,9 @@
       TO: $file_path
 
 - TASK: check-login
-  PARAMS: host
+  PARAMS: host account=@./account.yml
   DO:
-    - SET: HOST=$host ACCOUNT=@./account.yml
+    - SET: HOST=$host ACCOUNT=$account
     - REPEAT: 30
       DO:
          - SLEEP: 5

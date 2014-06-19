@@ -1,8 +1,8 @@
 - TASK: aws
   PARAMS: command subcommand params
   DO:
-    - DEFAULT: conf=@./conf.yml
-    - yaml.load: $conf
+    - DEFAULT: aws_conf=@./conf.yml
+    - yaml.load: $aws_conf
       RESULT: conf
     - COMMAND: AWS_DEFAULT_REGION=$conf.Region AWS_ACCESS_KEY_ID=$conf.AccessKeyID AWS_SECRET_ACCESS_KEY=$conf.SecretAccessKey aws $command $subcommand $params
     - json.load: $RESULT
