@@ -4,6 +4,7 @@ import email.header
 import imaplib
 import smtplib
 import yaml
+from email.MIMEText import MIMEText
 
 
 def imap4_create(host, port=None, use_ssl=False):
@@ -14,6 +15,13 @@ def imap4_create(host, port=None, use_ssl=False):
         return imaplib.IMAP4_SSL(*args)
     else:
         return imaplib.IMAP4(*args)
+
+
+def smtp_create(host, port=None):
+    args = [host]
+    if port:
+        args.append(port)
+    return smtplib.SMTP(*args)
 
 
 def _mail_parse(message):
@@ -77,5 +85,40 @@ def recv(runtime, args, op):
     return mails
 
 
+def create_message(from_addr, to_addr, subject, body, encoding):
+    msg = MIMEText(body, 'plain', encoding)
+    msg['Subject'] = subject
+    msg['From'] = from_addr 
+    msg['To'] = '; '.join(to_addr)
+    return msg
+
+
 def send(runtime, args, op):
-    pass
+    conf_file = runtime._expand_path(args[0])
+    with open(conf_file) as f:
+        conf = yaml.load(f)
+    user = conf.get('username')
+    password = conf.get('password')
+    from_addr = conf.get('from')
+    to_addr = op.get('TO')
+    if not isinstance(to_addr, list):
+        to_addr = [to_addr]
+    if isinstance(op.get('BODY'), unicode):
+        encoding = 'ISO-2022-JP'
+    else:
+        encoding = None
+    msg = create_message(from_addr, to_addr, op.get('SUBJECT'), op.get('BODY'), encoding)
+    print msg
+    try:
+        smtp = smtp_create(conf['host'], conf.get('port'))
+        code, resp = smtp.ehlo()
+        if resp.find('STARTTLS') >= 0:
+            code, resp = smtp.starttls()
+            code, resp = smtp.ehlo()
+            code, resp = smtp.login(user, password)
+        smtp.sendmail(from_addr, to_addr, msg.as_string())
+        smtp.close()
+    except Exception, e:
+        print "*** [email.send] failed to send mail: {0}".format(e)
+    finally:
+        pass
