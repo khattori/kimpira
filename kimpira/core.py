@@ -1,4 +1,5 @@
 import inspect
+import functools
 import os
 import re
 import shlex
@@ -148,10 +149,13 @@ class Environ(object):
 
     def set_vars(self, **kwargs):
         for k, v in kwargs.items():
+            saved = False
             for ctx in reversed(self.current_contexts):
                 if k in ctx:
                     ctx[k] = v
+                    saved = True
                     break
+            if not saved:
                 self.locals[k] = v
 
     @property
@@ -187,6 +191,9 @@ class Runtime(object):
         task_file = TaskFile()
         task_file.load(file_name)
         return self._call(task_file, task_name, args)
+
+    def get_var(self, k):
+        return self._environ.vars(k)
 
     def _call(self, task_file, task_name, args):
         task = task_file.get_task(task_name)
@@ -252,10 +259,10 @@ class Runtime(object):
                 raise RuntimeError('invalid args: {0}'.format(e))
             try:
                 if '.' in opcode:
-                    mod_name, meth_name = opcode.rsplit('.')
-                    mod_name = 'kimpira.library.' + mod_name
+                    mod_name, meth_name = opcode.rsplit('.', 1)
+                    mod_name = 'kimpira.lib.' + mod_name
                     mod = __import__(mod_name, fromlist=[meth_name])
-                    method = getattr(mod, meth_name)
+                    method = functools.partial(getattr(mod, meth_name), self)
                 else:
                     method = getattr(self, '_do_' + opcode)
             except AttributeError:
@@ -397,3 +404,23 @@ class Runtime(object):
         if args is not None:
             mesg = ' '.join(args)
         raise RuntimeError('ABORT: {0}'.format(mesg))
+
+    def _do_DATA(self, args, op):
+        return self.convert_data(op)
+
+    def convert_data(self, data):
+        def _conv_dict(dic):
+            d = {}
+            for k, v in dic.items():
+                d[k] = self.convert_data(v)
+            return d
+
+        def _conv_list(lst):
+            return [self.convert_data(v) for v in lst]
+
+        if isinstance(data, dict):
+            return _conv_dict(data)
+        elif isinstance(data, list):
+            return _conf_list(data)
+        else:
+            return self._expand_vars(data)
