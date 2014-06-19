@@ -1,0 +1,17 @@
+- TASK: setup-awstools
+  DO:
+    - COMMAND: aws3 --version
+      WARN_ONLY: True
+    - IF: ${ $RESULT.return_code == 0 }
+      THEN:
+        - PRINT: awstools is already installed!
+        - RETURN: 0
+    - COMMAND: whoami
+      RESULT: result
+    - PRINT: installing awstools...
+    - IF: ${ $result != 'root' }
+      THEN:
+        - PRINT: please run in root user!
+        - RETURN: 0
+    - COMMAND: pip install awscli
+ 

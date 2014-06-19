@@ -1,0 +1,36 @@
+- TASK: aws
+  PARAMS: command subcommand params
+  DO:
+    - DEFAULT: conf=@./conf.yml
+    - yaml.load: $conf
+      RESULT: conf
+    - COMMAND: AWS_DEFAULT_REGION=$conf.Region AWS_ACCESS_KEY_ID=$conf.AccessKeyID AWS_SECRET_ACCESS_KEY=$conf.SecretAccessKey aws $command $subcommand $params
+    - json.load: $RESULT
+
+- TASK: ec2-create-key-pair
+  PARAMS: key_name
+  DO:
+    - CALL: aws ec2 create-key-pair "--key-name $key_name"
+
+- TASK: ec2-delete-key-pair
+  PARAMS:
+    - key_name
+  DO:
+    - CALL: aws ec2 delete-key-pair "--key-name $key_name"
+
+- TASK: ec2-create-tags
+  PARAMS: resources key val
+  DO:
+    - CALL: aws ec2 create-tags "--resources $resources --tags Key=$key,Value=$val"
+
+- TASK: ec2-describe-instance-status
+  PARAMS: instance_ids
+  DO:
+    - CALL: aws ec2 describe-instance-status "--instance-ids $instance_ids"
+    - RETURN: $RESULT.InstanceStatuses
+
+- TASK: ec2-run-instances
+  PARAMS: image_id key_name security_groups=default instance_type=t1.micro
+  DO:
+    - CALL: aws ec2 run-instances "--image-id $image_id --key-name $key_name --security-groups $security_groups --instance-type $instance_type"
+    - RETURN: $RESULT.Instances[0].InstanceId

@@ -1,0 +1,65 @@
+- TASK: setup-wordpress
+  PARAMS: host account
+  DO: 
+    - WITH: HOST=$host ACCOUNT=$account
+      DO:
+        - CALL: package-download
+        - CALL: start-services
+        - CALL: create-db
+        - CALL: configure-and-copy
+        - CALL: initialize
+ 
+- TASK: package-download
+  DO:
+    - COMMAND: wget -q -nc http://ja.wordpress.org/latest-ja.tar.gz
+    - WITH: SUDO=True
+      DO:
+        - COMMAND: yum install -y httpd mysql-server php php-mysql php-mbstring
+
+- TASK: start-services
+  DO:
+    - WITH: SUDO=True
+      DO:
+        - COMMAND: chkconfig mysqld on; service mysqld start
+        - COMMAND: chkconfig httpd on; service httpd start
+
+- TASK: create-db
+  DO:
+    - DEFAULT: conf=@./conf.yml
+    - yaml.load: $conf
+      RESULT: conf
+    - SET: sql="'create database $conf.mysql_db_name default character set utf8;'"
+    - COMMAND: echo $sql | mysql -u root
+    - SET: sql="'grant all on ${conf.mysql_db_name}.* to ${conf.mysql_db_user}@localhost identified by \"${conf.mysql_db_password}\";flush privileges;'"
+    - COMMAND: echo $sql | mysql -u root
+
+- TASK: configure-and-copy
+  DO:
+    - DEFAULT: conf=@./conf.yml
+    - yaml.load: $conf
+      RESULT: conf
+    - COMMAND: tar zxvf latest-ja.tar.gz
+    - COMMAND: sed -e \"s/database_name_here/$conf.mysql_db_name/\" -e \"s/username_here/$conf.mysql_db_user/\" -e \"s/password_here/$conf.mysql_db_password/\" wordpress/wp-config-sample.php > wordpress/wp-config.php
+    - WITH: SUDO=True
+      DO:
+        - COMMAND: mv wordpress /var/www/html/wordpress
+        - COMMAND: chown -R apache:apache /var/www/html/wordpress
+
+- TASK: initialize
+  DO:
+    - DEFAULT: conf=@./conf.yml
+    - yaml.load: $conf
+      RESULT: conf
+    - http.post: http://$HOST/wordpress/wp-admin/install.php?step=2
+      DATA: 
+        weblog_title: $conf.wp_title
+        user_name: admin
+        admin_password: $conf.wp_admin_password
+        admin_password2: $conf.wp_admin_password
+        admin_email: $conf.wp_admin_email
+        log_public: '1'
+        Submit: WordPress をインストール
+    - WITH: SUDO=True
+      DO:
+        - COMMAND: rm /var/www/html/wordpress/wp-admin/install.php
+    - RETURN: http://$HOST/wordpress

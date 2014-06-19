@@ -1,0 +1,6 @@
+mysql_db_name: wordpress
+mysql_db_user: wordpress
+mysql_db_password: wordpress
+wp_title: JTF2014デモブログ
+wp_admin_password: jtf2014
+wp_admin_email: admin@kompira.jp

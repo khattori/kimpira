@@ -1,0 +1,58 @@
+- TASK: create-instance-and-wait-running
+  PARAMS: name image_id key_name security_groups=default instance_type=t1.micro
+  DO:
+    - CALL: ec2-run-instances $image_id $key_name $security_groups $instance_type
+      IN: "@./api.yml"
+      RESULT: instance_id
+    - CALL: ec2-create-tags $instance_id Name $name
+      IN: "@./api.yml"
+    - CALL: wait-instance-running $instance_id
+    - RETURN: $instance_id
+
+- TASK: get-instance-status
+  PARAMS: instance_id
+  DO:
+    - CALL: aws ec2 describe-instances "--instance-ids $instance_id"
+      IN: "@./api.yml"
+    - RETURN: $RESULT.Reservations[0].Instances[0].State.Name
+
+- TASK: get-instance-public-ip
+  PARAMS: instance_id
+  DO:
+    - CALL: aws ec2 describe-instances "--instance-ids $instance_id"
+      IN: "@./api.yml"
+    - RETURN: $RESULT.Reservations[0].Instances[0].PublicIpAddress
+
+- TASK: wait-instance-running
+  PARAMS: instance_id
+  DO:
+    - REPEAT: 30
+      DO:
+        - SLEEP: 5
+        - CALL: get-instance-status $instance_id
+          RESULT: status
+      UNTIL: ${status == "running"}
+
+- TASK: create-key-and-save
+  PARAMS: key_name file_path
+  DO:
+    - PRINT: $file_path
+    - CALL: ec2-create-key-pair $key_name
+      IN: "@./api.yml"
+    - SAVE: $RESULT.KeyMaterial
+      TO: $file_path
+
+- TASK: check-login
+  PARAMS: host
+  DO:
+    - SET: HOST=$host ACCOUNT=@./account.yml
+    - REPEAT: 30
+      DO:
+         - SLEEP: 5
+         - COMMAND: id
+           WARN_ONLY:
+         - SET: status=$RESULT.return_code
+      UNTIL: ${status == "0"}
+    - IF: ${status!='"0"'}
+      THEN:
+        - ABORT: Failed to login $host
