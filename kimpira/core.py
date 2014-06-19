@@ -392,6 +392,28 @@ class Runtime(object):
             i += 1
         return result
 
+    def _do_FOR(self, args, op):
+        """
+        - FOR: <ident>
+          IN: <sequential expression>
+          DO: <operation>*
+        """
+        loop_var = args[0]
+        if not is_ident(loop_var):
+            raise RuntimeError('invalid for loop var name: {0}'.format(loop_var))
+
+        body = op.get('DO') or []
+        result = None
+        in_expr = self._parse_args(op.get('IN') or [])
+        if len(in_expr) == 1 and in_expr[0].startswith('$') and is_ident(in_expr[0][1:]):
+            in_expr = self._environ.vars[in_expr[0][1:]]
+        else:
+            in_expr = [self._expand_vars(v) for v in in_expr]
+        for v in in_expr:
+            self._environ.set_vars(**{loop_var: v})
+            result = self._do(body)
+        return result
+
     def _do_SAVE(self, args, op):
         to_file = self._expand_vars(op.get('TO'))
         if to_file:
