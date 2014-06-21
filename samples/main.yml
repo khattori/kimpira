@@ -1,0 +1,31 @@
+- TASK: main
+  PARAMS: imap4_conf=@./imap4_conf.yml smtp_conf=@./smtp_conf.ytml aws_conf=@./lib/aws/conf.yml account=@./lib/aws/account.yml
+  DO:
+     - WITH: imap4_conf=$imap4_conf smtp_conf=$smtp_conf aws_conf=$aws_conf account=$account
+       DO:
+         - CALL: recv-mail
+
+- TASK: recv-mail
+  DO:
+    - email.recv: $imap4_conf
+      RESULT: mails
+    - FOR: mail
+      IN: $mails
+      DO: 
+        - IF: '"${ $mail.Subject == \"Install Wordpress\" }"'
+          THEN:
+            - CALL: create-wordpress-server
+              IN: '@./wordpress/wordpress.yml'
+              RESULT: url
+            - CALL: send-mail $mail.From $url
+
+- TASK: send-mail
+  PARAMS: to_addr url
+  DO:
+    - PRINT: $to_addr $url
+    - email.send: $smtp_conf
+      TO: $to_addr
+      SUBJECT: wordpress server setup done!
+      BODY: $url
+
+
