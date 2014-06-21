@@ -45,7 +45,8 @@ def _mail_parse(message):
         content_type = message.get_content_type()
         if content_type == 'text/plain':
             decode_charset = message.get_content_charset('utf-8')
-            payload = payload.decode(decode_charset)
+            if decode_charset:
+                payload = payload.decode(decode_charset)
         dic['Is-Multipart'] = False
         dic['Body'] = payload
         dic['Filename'] = filename
@@ -86,7 +87,10 @@ def recv(runtime, args, op):
 
 
 def create_message(from_addr, to_addr, subject, body, encoding):
-    msg = MIMEText(body, 'plain', encoding)
+    if encoding:
+        msg = MIMEText(body, 'plain', encoding)
+    else:
+        msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = from_addr 
     msg['To'] = '; '.join(to_addr)
@@ -108,7 +112,6 @@ def send(runtime, args, op):
     else:
         encoding = None
     msg = create_message(from_addr, to_addr, op.get('SUBJECT'), op.get('BODY'), encoding)
-    print msg
     try:
         smtp = smtp_create(conf['host'], conf.get('port'))
         code, resp = smtp.ehlo()

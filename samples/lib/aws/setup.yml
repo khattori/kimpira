@@ -1,6 +1,6 @@
 - TASK: setup-awstools
   DO:
-    - COMMAND: aws3 --version
+    - COMMAND: aws --version
       WARN_ONLY: True
     - IF: ${ $RESULT.return_code == 0 }
       THEN:
