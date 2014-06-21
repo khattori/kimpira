@@ -100,7 +100,7 @@ class TaskFile(object):
 
         params = task.get('PARAMS') or []
         if not isinstance(params, list):
-            params = params.split()
+            params = shlex.split(params)
 
         body = task.get('DO') or []
         if not isinstance(body, list):

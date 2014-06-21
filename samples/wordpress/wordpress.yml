@@ -1,6 +1,7 @@
 - TASK: create-wordpress-server
-  PARAMS: name=JTF_Test image_id=ami-c9562fc8 key_name=JTF2014 account=@../lib/aws/account.yml
+  PARAMS: name=JTF_Test image_id=ami-c9562fc8 key_name=JTF2014
   DO:
+    - DEFAULT: account=@../lib/aws/account.yml
     - CALL: create-instance-and-wait-running $name $image_id $key_name
       IN: "@../lib/aws/utils.yml"
       RESULT: instance_id
@@ -15,3 +16,4 @@
     - PRINT: "****"
     - PRINT: "**** SETUP COMPLETED! --- $url"
     - PRINT: "****"
+    - RETURN: $url

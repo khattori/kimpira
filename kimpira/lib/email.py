@@ -107,11 +107,14 @@ def send(runtime, args, op):
     to_addr = op.get('TO')
     if not isinstance(to_addr, list):
         to_addr = [to_addr]
-    if isinstance(op.get('BODY'), unicode):
+    to_addr = [runtime._expand_vars(x) for x in to_addr]
+    subject = runtime._expand_vars(op.get('SUBJECT'))
+    body = runtime._expand_vars(op.get('BODY'))
+    if isinstance(body, unicode):
         encoding = 'ISO-2022-JP'
     else:
         encoding = None
-    msg = create_message(from_addr, to_addr, op.get('SUBJECT'), op.get('BODY'), encoding)
+    msg = create_message(from_addr, to_addr, subject, body, encoding)
     try:
         smtp = smtp_create(conf['host'], conf.get('port'))
         code, resp = smtp.ehlo()
